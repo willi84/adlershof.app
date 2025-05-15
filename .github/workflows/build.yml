@@ -38,3 +38,6 @@ jobs:
 
       - name: 📤 Upload CSV to Google Sheet
         run: node scripts/upload_to_sheets.js
+
+      - name: 🚀 Trigger Vercel Build Hook
+        run: curl -X POST ${{ secrets.VERCEL_BUILD_HOOK_URL }}

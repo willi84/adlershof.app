@@ -9,7 +9,7 @@ const SHEET_NAME = 'final';
 function parseCSV(filePath) {
   const raw = fs.readFileSync(filePath, 'utf8');
   const lines = raw.trim().split(/\r?\n/);
-  const rows = lines.map(line => line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/^"|"$/g, '').replace(/""/g, '"')));
+  const rows = lines.map(line => line.split(/,(?=(?:(?:[^\"]*\"){2})*[^\"]*$)/).map(cell => cell.replace(/^"|"$/g, '').replace(/""/g, '"')));
   return rows;
 }
 
@@ -42,7 +42,7 @@ async function main() {
   });
 
   const existingRows = existingData.values || [];
-  const existingHeader = existingRows[0] || [];
+  const existingHeader = existingRows[0] || header;
   const output = [existingHeader];
   const colIndex = key => existingHeader.indexOf(key);
 
@@ -53,14 +53,12 @@ async function main() {
     const matchIndex = existingRows.findIndex(r => `${r[colIndex('Name')]}|${r[colIndex('Latitude')]}|${r[colIndex('Longitude')]}` === key);
 
     if (matchIndex !== -1) {
-      // Update existing row
       for (let i = 0; i < header.length; i++) {
         if (existingHeader[i] && header[i] && header[i] !== '' && row[i] !== '') {
           existingRows[matchIndex][i] = row[i];
         }
       }
     } else {
-      // Append new row
       output.push(row);
     }
   }
@@ -74,38 +72,72 @@ async function main() {
     requestBody: { values: final },
   });
 
-  // Formatierung mit dynamisch ermittelter sheetId
+  const formatRequests = [
+    {
+      repeatCell: {
+        range: {
+          sheetId: sheetId,
+          startRowIndex: 0,
+          endRowIndex: 1
+        },
+        cell: {
+          userEnteredFormat: {
+            textFormat: { bold: true },
+            backgroundColor: { red: 0.9, green: 0.9, blue: 0.9 },
+            horizontalAlignment: 'CENTER',
+            wrapStrategy: 'WRAP'
+          }
+        },
+        fields: 'userEnteredFormat(textFormat,backgroundColor,horizontalAlignment,wrapStrategy)'
+      }
+    },
+    {
+      autoResizeDimensions: {
+        dimensions: {
+          sheetId: sheetId,
+          dimension: 'COLUMNS',
+          startIndex: 0,
+          endIndex: header.length
+        }
+      }
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId: sheetId,
+          startRowIndex: 1
+        },
+        cell: {
+          userEnteredFormat: {
+            textFormat: { foregroundColor: { blue: 0.8 }, underline: true },
+          }
+        },
+        fields: 'userEnteredFormat.textFormat.foregroundColor,userEnteredFormat.textFormat.underline'
+      }
+    },
+    {
+      updateBorders: {
+        range: {
+          sheetId: sheetId,
+          startRowIndex: 0,
+          endRowIndex: final.length,
+          startColumnIndex: 0,
+          endColumnIndex: header.length
+        },
+        top: { style: 'SOLID', width: 1, color: { red: 0.7, green: 0.7, blue: 0.7 } },
+        bottom: { style: 'SOLID', width: 1, color: { red: 0.7, green: 0.7, blue: 0.7 } },
+        left: { style: 'SOLID', width: 1, color: { red: 0.7, green: 0.7, blue: 0.7 } },
+        right: { style: 'SOLID', width: 1, color: { red: 0.7, green: 0.7, blue: 0.7 } },
+        innerHorizontal: { style: 'DOTTED', width: 1, color: { red: 0.9, green: 0.9, blue: 0.9 } },
+        innerVertical: { style: 'DOTTED', width: 1, color: { red: 0.9, green: 0.9, blue: 0.9 } }
+      }
+    }
+  ];
+
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId: SPREADSHEET_ID,
     requestBody: {
-      requests: [
-        {
-          repeatCell: {
-            range: {
-              sheetId: sheetId,
-              startRowIndex: 0,
-              endRowIndex: 1
-            },
-            cell: {
-              userEnteredFormat: {
-                textFormat: { bold: true },
-                backgroundColor: { red: 0.9, green: 0.9, blue: 0.9 },
-              }
-            },
-            fields: 'userEnteredFormat(textFormat,backgroundColor)'
-          }
-        },
-        {
-          autoResizeDimensions: {
-            dimensions: {
-              sheetId: sheetId,
-              dimension: 'COLUMNS',
-              startIndex: 0,
-              endIndex: header.length
-            }
-          }
-        }
-      ]
+      requests: formatRequests
     }
   });
 
