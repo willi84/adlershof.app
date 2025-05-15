@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="/assets/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="/styles.css">
+    {# <link rel="manifest" href="/manifest.json"> #}
+    <script src="/script.js"></script>
+</head>
+<body>
+    {# <nav>
+        <a href="/">Home</a> |
+        <a href="/about">About</a>
+    </nav> #}
+
+    {# <main> #}
+        {{ content | safe }}
+    {# </main> #}
+    <script src="/assets/bootstrap.bundle.min.js"></script>
+    <footer>
+        Ein Projekt mit ❤ Herz von <a href="https://robert.berlin">Robert Willemelis</a> für den <a href="https://adlerkiez.de/">Kiezbeirat</a> .
+      </footer>
+</body>
+</html>

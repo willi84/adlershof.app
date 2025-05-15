@@ -1,0 +1,9 @@
+---
+layout: raw.njk
+---
+{% set data = get_stores %}
+{
+    {%- if data -%}
+    "data": {{ data | dump | safe }}
+  {%- endif -%}
+}

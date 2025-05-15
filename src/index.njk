@@ -1,0 +1,60 @@
+---
+title: "Overview of stores"
+layout: base.njk
+---
+
+<div class="container">
+    <div class="container my-5">
+      <h1 class="title">adlershof<span>.app</span></h1>
+      <p class="small center"> (experimental) </p>
+      <p class="center"><span id="all_matches">{{ get_stores.items | length }} von</span> {{ get_stores.items | length }} Geschäften angezeigt </p>
+    </div>
+    {# <form> #}
+        <div class="mb-3 " >
+          <input type="text" class="form-control " id="search" aria-describedby="emailHelp" aria-role="input" placeholder="Suche nach Geschäften" onkeyup="search()">
+          <div id="no-result" class="form-text search__no-result hidden">Eventuell ist das Geschäft <span class="search__value"></span> noch nicht gelistet!</div>
+        </div>
+      {# </form> #}
+</div>
+
+{# <input type="text" id="search" placeholder="Suche nach Geschäften" onkeyup="search()"> #}
+<ul class="items">
+    <tbody>
+        <tr>
+            <td>
+                {% for item in get_stores.items %}
+                  <li class="item" data-item="item_{{loop.index}}" data-name="{{item.name}}" data-location="{{item.location}}" data-open_hours="{{item.open_hours}}" data-category="{{item.category}}">
+                      {% if item.name %}
+                          <h2>Name: 🏪 {{item.name  }}</h2>
+                      {% endif %}
+                      <table class="item">
+                        {% for column in get_stores.labels %}
+                          {% if item[column.key] and column.key != 'latitude' and column.key != 'longitude' %}
+                            {# data- are search values #}
+                            <tr>
+                              <td class="highlight">{{column.label}}</td>
+                              <td>
+                                {% if column.key == 'location' and item.latitude and item.longitude %}
+                                <svg class="image--small" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 92.3 132.3"><path fill="#1a73e8" d="M60.2 2.2C55.8.8 51 0 46.1 0 32 0 19.3 6.4 10.8 16.5l21.8 18.3L60.2 2.2z"/><path fill="#ea4335" d="M10.8 16.5C4.1 24.5 0 34.9 0 46.1c0 8.7 1.7 15.7 4.6 22l28-33.3-21.8-18.3z"/><path fill="#4285f4" d="M46.2 28.5c9.8 0 17.7 7.9 17.7 17.7 0 4.3-1.6 8.3-4.2 11.4 0 0 13.9-16.6 27.5-32.7-5.6-10.8-15.3-19-27-22.7L32.6 34.8c3.3-3.8 8.1-6.3 13.6-6.3"/><path fill="#fbbc04" d="M46.2 63.8c-9.8 0-17.7-7.9-17.7-17.7 0-4.3 1.5-8.3 4.1-11.3l-28 33.3c4.8 10.6 12.8 19.2 21 29.9l34.1-40.5c-3.3 3.9-8.1 6.3-13.5 6.3"/><path fill="#34a853" d="M59.1 109.2c15.4-24.1 33.3-35 33.3-63 0-7.7-1.9-14.9-5.2-21.3L25.6 98c2.6 3.4 5.3 7.3 7.9 11.3 9.4 14.5 6.8 23.1 12.8 23.1s3.4-8.7 12.8-23.2"/></svg>
+                                  <a href="https://maps.google.com/?q={{item.latitude | maps}},{{item.longitude | maps}}" target="_blank">{{item[column.key]}}</a> 
+                                {% else %}
+                                  {{item[column.key]}}
+                                {% endif %}
+                              </td>
+                            </tr>
+                          {% endif %}
+                        {% endfor %}
+                      </table>
+                      {% set index = loop.index + 1 %}
+                      {% set edit_url = get_stores.source.data + "&range=" + index + ":" +  index %}
+                     <div class="text-right"><a href="{{edit_url}}" target="_blank">✍️</a></div>
+                    </li>
+                    {% endfor %}
+                </td>
+            </tr>
+        </tbody>
+        
+    </ul>
+    
+{# {{ get_stores | dump }} #}
+

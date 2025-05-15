@@ -1,0 +1,136 @@
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    /* height: 100vh; */
+    margin: 0;
+    background-color: #f1f5ef;
+}
+svg {
+    width: 50%; /* Adjust size */
+    height: auto;
+}
+svg.small {
+    width: 15%; /* Adjust size */
+    height: auto;
+}
+.buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+button:disabled {
+    background-color: #245f49;
+    cursor: not-allowed;
+}
+.item td {
+    padding: 10px;
+    border: 1px solid #cb4e5f;
+    color: #245f49;
+    background-color: #f1f5ef;
+}
+
+
+.items td {
+    padding: 10px;
+    /* border: 1px solid #f1f5ef; */
+    color: #e40421;
+}
+.mt-50 {
+    margin-top: 50px;
+}
+td.highlight {
+    background-color: #e40421;
+    color: white;
+}
+
+/** search **/
+.search__value{
+    color: white;
+    font-weight: bold;
+    background-color: rgb(217, 130, 130);
+}
+.search-match{
+    background-color: yellow;
+}
+.search__area{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-container {
+    width: 100%;
+    max-width: 600px;
+}
+.form-control {
+    height: 50px;
+    border-radius: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.search__no-result{
+    color: green;
+}
+.search__info--hidden{
+    opacity: 0;
+}
+.hidden {
+    display: none;
+}
+h1.title{
+    font-weight: bold;
+    text-align: center;
+    color: #4bae32;
+}
+h1.title span{
+    color: #e40421;
+}
+.center{
+    text-align: center;
+}
+.small{
+    font-size: 12px;
+}
+.items li{
+    list-style: none;
+    margin-bottom: 10px;
+}
+li.item{
+    background-color: #ee6f1f;
+    padding: 10px;
+    border-radius: 5px;
+}
+li.item h2{
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
+footer{
+    margin-top: 50px;
+    text-align: center;
+    background-color: #e40421;
+    color: white;
+    padding: 10px;
+    width: 100%;
+}
+footer a{
+    color: white;
+    font-weight: bold;
+}
+.image--small{
+    width: 15px
+
+}
+.text-right{
+    text-align: right;
+}
