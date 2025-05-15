@@ -1,22 +1,33 @@
+name: Build & Upload POIs to Google Sheet
+
+on:
+  workflow_dispatch:  # Manuell auslösbar
+  schedule:
+    - cron: "0 5 * * *"  # Täglich um 5 Uhr (UTC)
+
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Set up Node.js
+    steps:
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: 🧰 Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
 
-      - name: Write Google Credentials
-        run: echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}" > google-credentials.json
-
-      - name: Install dependencies
+      - name: 📁 Install Dependencies
         run: npm ci
 
-      - name: Create POI CSV
-        run: node scripts/create_sheet.js
+      - name: 🔐 Write Google Credentials
+        run: echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}" > google-credentials.json
 
-      - name: Upload to Google Sheet
+      - name: 📊 Create CSV from OSM + HERE
+        run: node scripts/create_sheet.js
+        env:
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+
+      - name: 📤 Upload CSV to Google Sheet
         run: node scripts/upload_to_sheets.js
