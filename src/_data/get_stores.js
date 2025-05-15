@@ -18,7 +18,7 @@ module.exports = async function () {
     const id = GID_TAB_2;
     const base_url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}`;
     const base_data_url = `${base_url}/gviz/tq?tqx=out:json`;
-    const data_id = '863575810';
+    const data_id = '1389058166';
     const base_edit_url = `${base_url}/edit?gid=${data_id}#gid=${data_id}`;
     const api_names = {}
     const api_url = `${base_data_url}&gid=${id}`;

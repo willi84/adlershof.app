@@ -1,5 +1,6 @@
 const https = require('https');
 const fs = require('fs');
+const path = require('path');
 
 const HERE_API_KEY = process.env.HERE_API_KEY;
 
@@ -10,12 +11,22 @@ const bbox = {
   east: 13.566
 };
 
+console.log("🛰️ Erwartete Requests:");
+console.log("- OSM Overpass-Abfrage für: shop, amenity, office, healthcare, tourism, leisure, club");
+console.log("- HERE Discover API mit bbox:", bbox);
+console.log("- HERE Reverse-Geocoding für jeden POI (" + bbox.north + "," + bbox.east + ")");
+
 function fetchOSMData() {
   const query = `
     [out:json][timeout:25];
     (
-      node["shop"](52.425,13.509,52.4445,13.566);
-      node["amenity"](52.425,13.509,52.4445,13.566);
+      node["shop"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+      node["amenity"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+      node["office"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+      node["healthcare"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+      node["tourism"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+      node["leisure"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+      node["club"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
     );
     out center;
   `;
@@ -31,9 +42,11 @@ function fetchOSMData() {
             .filter(e => e.tags?.name)
             .map(e => ({
               name: e.tags.name,
-              type: e.tags.shop || e.tags.amenity || '',
-              lat: e.lat,
-              lon: e.lon,
+              type: e.tags.shop || e.tags.amenity || e.tags.office || e.tags.healthcare || e.tags.tourism || e.tags.leisure || e.tags.club || '',
+              latitude: e.lat,
+              longitude: e.lon,
+              opening_hours: e.tags.opening_hours || '',
+              website: e.tags.website || '',
               source: 'OSM'
             }));
           resolve(results);
@@ -50,8 +63,8 @@ function fetchOSMData() {
 }
 
 function fetchHereData() {
+  const url = `https://discover.search.hereapi.com/v1/discover?in=bbox:${bbox.south},${bbox.west},${bbox.north},${bbox.east}&limit=100&apiKey=${HERE_API_KEY}`;
   return new Promise((resolve, reject) => {
-    const url = `https://discover.search.hereapi.com/v1/discover?in=bbox:${bbox.south},${bbox.west},${bbox.north},${bbox.east}&limit=100&apiKey=${HERE_API_KEY}`;
     https.get(url, res => {
       let data = '';
       res.on('data', chunk => (data += chunk));
@@ -62,8 +75,10 @@ function fetchHereData() {
           const results = items.map(item => ({
             name: item.title,
             type: item.categories?.[0]?.name || '',
-            lat: item.position.lat,
-            lon: item.position.lng,
+            latitude: item.position.lat,
+            longitude: item.position.lng,
+            opening_hours: item.openingHours?.text || '',
+            website: item.contacts?.[0]?.www?.[0]?.value || '',
             source: 'HERE'
           }));
           resolve(results);
@@ -77,8 +92,7 @@ function fetchHereData() {
 
 async function reverseGeocode(lat, lon) {
   const url = `https://revgeocode.search.hereapi.com/v1/revgeocode?at=${lat},${lon}&lang=de-DE&apiKey=${HERE_API_KEY}`;
-
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     https.get(url, res => {
       let data = '';
       res.on('data', chunk => (data += chunk));
@@ -95,7 +109,7 @@ async function reverseGeocode(lat, lon) {
           } else {
             resolve({ address: '', stadtteil: '' });
           }
-        } catch (e) {
+        } catch {
           resolve({ address: '', stadtteil: '' });
         }
       });
@@ -109,28 +123,32 @@ async function mergeSources(osm, here) {
   for (const poi of [...osm, ...here]) {
     const duplicate = combined.find(existing =>
       poi.name === existing.name &&
-      Math.abs(poi.lat - existing.lat) < 0.001 &&
-      Math.abs(poi.lon - existing.lon) < 0.001
+      Math.abs(poi.latitude - existing.latitude) < 0.001 &&
+      Math.abs(poi.longitude - existing.longitude) < 0.001
     );
 
     if (!duplicate) {
       combined.push({
         name: poi.name,
         type: poi.type,
-        lat: poi.lat,
-        lon: poi.lon,
+        latitude: poi.latitude,
+        longitude: poi.longitude,
         source: poi.source,
         address: '',
-        stadtteil: ''
+        stadtteil: '',
+        opening_hours: poi.opening_hours,
+        website: poi.website
       });
     } else {
       duplicate.source = 'Beide';
+      duplicate.opening_hours ||= poi.opening_hours;
+      duplicate.website ||= poi.website;
     }
   }
 
   for (let i = 0; i < combined.length; i++) {
     const entry = combined[i];
-    const { address, stadtteil } = await reverseGeocode(entry.lat, entry.lon);
+    const { address, stadtteil } = await reverseGeocode(entry.latitude, entry.longitude);
     entry.address = address;
     entry.stadtteil = stadtteil;
     console.log(`📍 ${i + 1}/${combined.length}: ${entry.name} → ${stadtteil}`);
@@ -140,18 +158,16 @@ async function mergeSources(osm, here) {
   return combined;
 }
 
-function writeCSV(data, path = 'adlershof.csv') {
-  const header = 'Name,Typ,Adresse,Stadtteil,lat,lon,Quelle\n';
+function writeCSV(data, outputPath = path.join('tmp', 'adlershof-pois.csv')) {
+  if (!fs.existsSync('tmp')) {
+    fs.mkdirSync('tmp');
+  }
+  const header = 'Name,Typ,Adresse,Stadtteil,Latitude,Longitude,Quelle,Öffnungszeiten,Website\n';
   const rows = data.map(d =>
-    `"${d.name.replace(/"/g, '""')}","${d.type.replace(/"/g, '""')}","${d.address.replace(/"/g, '""')}","${d.stadtteil.replace(/"/g, '""')}",${d.lat},${d.lon},${d.source}`
+    `"${d.name.replace(/"/g, '""')}","${d.type.replace(/"/g, '""')}","${d.address.replace(/"/g, '""')}","${d.stadtteil.replace(/"/g, '""')}",${d.latitude},${d.longitude},${d.source},"${d.opening_hours.replace(/"/g, '""')}","${d.website.replace(/"/g, '""')}`
   );
-// create folder tmp if not exists
-    if (!fs.existsSync('tmp')) {
-      fs.mkdirSync('tmp', { recursive: true });
-    }
-
-  fs.writeFileSync(path, header + rows.join('\n'), 'utf8');
-  console.log(`✅ CSV gespeichert unter ${path}`);
+  fs.writeFileSync(outputPath, header + rows.join('\n'), 'utf8');
+  console.log(`✅ CSV gespeichert unter ${outputPath}`);
 }
 
 async function main() {
@@ -170,7 +186,7 @@ async function main() {
 
   console.log('🔀 Führe zusammen und ergänze Adressen …');
   const merged = await mergeSources(osm, here);
-  console.log(`✅ Gesamt nach Merge: ${merged.length} Einträge`);
+  console.log(`✅ Gesamt: ${merged.length} POIs`);
 
   writeCSV(merged);
 }

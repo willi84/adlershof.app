@@ -3,3 +3,5 @@ dist
 coverage
 _site
 .vscode
+tmp
+.DS_Store

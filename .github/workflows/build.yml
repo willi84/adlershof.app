@@ -1,0 +1,22 @@
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Write Google Credentials
+        run: echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}" > google-credentials.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create POI CSV
+        run: node scripts/create_sheet.js
+
+      - name: Upload to Google Sheet
+        run: node scripts/upload_to_sheets.js
