@@ -1,0 +1,23 @@
+// public/manifest.webmanifest
+{
+    "name": "Adlershof App",
+    "short_name": "Adlershof",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#004d99",
+    "description": "Infos rund um Adlershof – Fahrpläne, Karten, Services.",
+    "icons": [
+      {
+        "src": "/assets/icons/icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "/assets/icons/icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }
+  

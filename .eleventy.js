@@ -9,9 +9,11 @@ module.exports = function (eleventyConfig) {
 // eleventyConfig.addPassthroughCopy({ src: 'src/assets/', dist: 'assets' });
 eleventyConfig.addPassthroughCopy("src/script.js");
 eleventyConfig.addPassthroughCopy("src/styles.css");
+eleventyConfig.addPassthroughCopy("src/manifest.webmanifest");
 eleventyConfig.addPassthroughCopy("src/assets/bootstrap.bundle.min.js");
+eleventyConfig.addPassthroughCopy("src/assets/service-worker.js");
 eleventyConfig.addPassthroughCopy("src/assets/bootstrap.min.css");
-eleventyConfig.addPassthroughCopy("src/icons"); // If you have icons
+eleventyConfig.addPassthroughCopy("src/assets/icons"); // If you have icons
 eleventyConfig.addPassthroughCopy("src/manifest.json"); // PWA support
 eleventyConfig.addFilter("typeOf", value => typeof value);
 eleventyConfig.addFilter("parseDate", (dateString) => {
