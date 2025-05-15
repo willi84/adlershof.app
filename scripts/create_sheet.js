@@ -162,13 +162,34 @@ function writeCSV(data, outputPath = path.join('tmp', 'adlershof-pois.csv')) {
   if (!fs.existsSync('tmp')) {
     fs.mkdirSync('tmp');
   }
-  const header = 'Name,Typ,Adresse,Stadtteil,Latitude,Longitude,Quelle,Öffnungszeiten,Website\n';
-  const rows = data.map(d =>
-    `"${d.name.replace(/"/g, '""')}","${d.type.replace(/"/g, '""')}","${d.address.replace(/"/g, '""')}","${d.stadtteil.replace(/"/g, '""')}",${d.latitude},${d.longitude},${d.source},"${d.opening_hours.replace(/"/g, '""')}","${d.website.replace(/"/g, '""')}`
-  );
-  fs.writeFileSync(outputPath, header + rows.join('\n'), 'utf8');
+
+  const escape = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+  const header = [
+    'Name', 'Typ', 'Adresse', 'Stadtteil',
+    'Latitude', 'Longitude', 'Quelle',
+    'Öffnungszeiten', 'Website'
+  ];
+
+  const lines = [
+    header.map(escape).join(','),
+    ...data.map(d => [
+      escape(d.name),
+      escape(d.type),
+      escape(d.address),
+      escape(d.stadtteil),
+      d.latitude,
+      d.longitude,
+      escape(d.source),
+      escape(d.opening_hours),
+      escape(d.website)
+    ].join(','))
+  ];
+
+  fs.writeFileSync(outputPath, lines.join('\r\n'), 'utf8');
   console.log(`✅ CSV gespeichert unter ${outputPath}`);
 }
+
 
 async function main() {
   if (!HERE_API_KEY) {
