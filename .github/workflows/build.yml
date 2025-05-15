@@ -1,9 +1,9 @@
 name: Build & Upload POIs to Google Sheet
 
 on:
-  workflow_dispatch:  # Manuell auslösbar
+  workflow_dispatch:    # 🔘 Startbar über GitHub Web UI
   schedule:
-    - cron: "0 5 * * *"  # Täglich um 5 Uhr (UTC)
+    - cron: "0 5 * * *" # ⏰ Optional: Täglich 5:00 UTC (6:00 MEZ)
 
 jobs:
   build-and-upload:
