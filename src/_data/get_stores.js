@@ -24,7 +24,8 @@ module.exports = async function () {
     const api_url = `${base_data_url}&gid=${id}`;
     const data = await getData(base_data_url);
     const data_api = await getData(api_url);
-    console.log(api_url)
+    console.log(`base_data_url: ${base_data_url}`);
+    console.log(`api_url: ${api_url}`);
     // console.log(data_api.table.rows.length);
     // console.log(data_api.table.rows);
     // console.log(data_api.table.cols.length);
@@ -81,6 +82,8 @@ module.exports = async function () {
         const key = data.table.cols[i].label;
         keysData.push(key.toLowerCase());
     }
+    console.log('Anzahl Datensätze:');
+    console.log(data.table.rows.length)
     // Daten umwandeln
     const items = data.table.rows.map(row => {
         const item = {};
