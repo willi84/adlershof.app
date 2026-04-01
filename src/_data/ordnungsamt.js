@@ -153,6 +153,36 @@ function getYearRange() {
   };
 }
 
+
+function extractImageUrls(value, collector = new Set()) {
+  if (!value) {
+    return [...collector];
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => extractImageUrls(entry, collector));
+    return [...collector];
+  }
+
+  if (typeof value === "object") {
+    Object.values(value).forEach((entry) => extractImageUrls(entry, collector));
+    return [...collector];
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (/^https?:\/\/.+\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(trimmed)) {
+      collector.add(trimmed);
+    }
+  }
+
+  return [...collector];
+}
+
+function getTodayDateKey() {
+  return formatDate(new Date());
+}
+
 function getHistoricalRanges(startYear) {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
@@ -254,6 +284,7 @@ function normalizeIssue(item) {
       ? null
       : Number((resolutionDurationHours / 24).toFixed(2));
   const thirdParties = detectThirdParties(item);
+  const imageUrls = extractImageUrls(item);
 
   return {
     id: item.id,
@@ -282,6 +313,7 @@ function normalizeIssue(item) {
     resolutionDurationHours,
     resolutionDurationDays,
     thirdParties,
+    imageUrls,
     isResolved: normalizeText(item.status) === "erledigt",
   };
 }
@@ -321,6 +353,11 @@ function buildAvailableFilters(issues) {
     statuses,
     thirdParties,
   };
+}
+
+function getTodayIssues(issues) {
+  const todayKey = getTodayDateKey();
+  return issues.filter((item) => (item.createdAt || "").slice(0, 10) === todayKey);
 }
 
 async function collectIssuesFromList(allIssues) {
@@ -396,6 +433,7 @@ async function fetchYearDumpData() {
     generationDurationText: formatDuration(generationDurationMs),
     filters: buildAvailableFilters(collected.issues),
     totals: collected.totals,
+    todayIssues: getTodayIssues(collected.issues),
     issues: collected.issues,
   };
 }
@@ -416,6 +454,7 @@ async function readLocalDump() {
         dumpPath: LOCAL_DUMP_PATH,
       },
       filters: buildAvailableFilters(normalizedIssues),
+      todayIssues: getTodayIssues(normalizedIssues),
       totals: {
         ...(parsed.totals || {}),
         adlershof: normalizedIssues.length,
@@ -464,6 +503,7 @@ async function getLiveDataset() {
     generationDurationText: formatDuration(generationDurationMs),
     filters: buildAvailableFilters(collected.issues),
     totals: collected.totals,
+    todayIssues: getTodayIssues(collected.issues),
     issues: collected.issues,
   };
 }

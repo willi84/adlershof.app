@@ -32,7 +32,9 @@ layout: base.njk
     </p>
   </div>
 
-  <section class="dashboard__stats">
+  <section class="dashboard__stats" data-widget="stats">
+    <div class="dashboard__widget-toggle-wrap"><button type="button" class="dashboard__widget-toggle" data-action="toggle-widget" data-target="stats" aria-expanded="true">Einklappen</button></div>
+    <div class="dashboard__widget-body">
     <article class="dashboard__card dashboard__card--accent">
       <span class="dashboard__label">📌 Gefilterte Meldungen</span>
       <strong class="dashboard__value" id="issue-count">{{ dataset.totals.adlershof }}</strong>
@@ -49,9 +51,12 @@ layout: base.njk
       <span class="dashboard__label">⏱️ JSON-Generierung</span>
       <strong class="dashboard__value dashboard__value--small" id="generation-duration">{{ dataset.generationDurationText }}</strong>
     </article>
+      </div>
   </section>
 
-  <section class="dashboard__grid dashboard__grid--filters">
+  <section class="dashboard__grid dashboard__grid--filters" data-widget="filters-map">
+    <div class="dashboard__widget-toggle-wrap"><button type="button" class="dashboard__widget-toggle" data-action="toggle-widget" data-target="filters-map" aria-expanded="true">Einklappen</button></div>
+    <div class="dashboard__widget-body">
     <article class="dashboard__panel dashboard__panel--soft">
       <h2>🎛️ Filter</h2>
       <div class="dashboard__filters">
@@ -90,11 +95,15 @@ layout: base.njk
     <article class="dashboard__panel dashboard__panel--map">
       <h2>🗺️ Hotspots</h2>
       <div id="issues-map" class="dashboard__map"></div>
-      <p class="small dashboard__map-hint">Punkte basieren auf den aktuell gefilterten Meldungen mit Koordinaten.</p>
+      <p class="small dashboard__map-hint">Gewichtete Flächen basieren auf gruppierten Hotspots der aktuell gefilterten Meldungen.</p>
+      <div id="hotspot-legend" class="hotspot-legend"></div>
     </article>
+    </div>
   </section>
 
-  <section class="dashboard__grid">
+  <section class="dashboard__grid" data-widget="analytics">
+    <div class="dashboard__widget-toggle-wrap"><button type="button" class="dashboard__widget-toggle" data-action="toggle-widget" data-target="analytics" aria-expanded="true">Einklappen</button></div>
+    <div class="dashboard__widget-body">
     <article class="dashboard__panel dashboard__panel--wide">
       <div class="dashboard__panel-headline">
         <h2>🟩 Aktivität</h2>
@@ -126,9 +135,21 @@ layout: base.njk
       <h2>🚦 Status</h2>
       <ul class="dashboard__ranking" id="ranking-status"></ul>
     </article>
+    </div>
   </section>
 
-  <section class="dashboard__panel dashboard__panel--wide">
+  <section class="dashboard__panel dashboard__panel--wide" data-widget="today">
+    <div class="dashboard__panel-headline">
+      <h2>📅 Heute</h2>
+      <p class="small">Alle heutigen Meldungen inkl. Bild, falls in den Detaildaten vorhanden.</p>
+    </div>
+    <div class="dashboard__widget-toggle-wrap"><button type="button" class="dashboard__widget-toggle" data-action="toggle-widget" data-target="today" aria-expanded="true">Einklappen</button></div>
+    <div class="dashboard__widget-body">
+      <ul class="items items--dashboard" id="today-issues-list"></ul>
+    </div>
+  </section>
+
+  <section class="dashboard__panel dashboard__panel--wide" data-widget="issues">
     <div class="dashboard__panel-headline">
       <h2>🗂️ Alle Meldungen</h2>
       <p class="small">PLZ und Bezirk sind in den Zusatzdetails einklappbar.</p>
@@ -140,7 +161,10 @@ layout: base.njk
         <select class="form-control dashboard__select" id="issue-provider"></select>
       </label>
     </div>
-    <ul class="items items--dashboard" id="issues-list"></ul>
+    <div class="dashboard__widget-toggle-wrap"><button type="button" class="dashboard__widget-toggle" data-action="toggle-widget" data-target="issues" aria-expanded="true">Einklappen</button></div>
+    <div class="dashboard__widget-body">
+      <ul class="items items--dashboard" id="issues-list"></ul>
+    </div>
   </section>
 </div>
 

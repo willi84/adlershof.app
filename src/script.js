@@ -42,6 +42,7 @@ const dashboardState = {
   markersLayer: null,
   itemDateMode: {},
   openDetails: {},
+  collapsedWidgets: {},
 };
 
 const MONTH_LABELS = [
@@ -110,6 +111,49 @@ const getHeatLevel = (count, maxCount) => {
   }
 
   return Math.max(1, Math.min(4, Math.ceil((count / maxCount) * 4)));
+};
+
+const HOTSPOT_SCALE = [
+  { label: '1 Meldung', color: '#e8f7d6' },
+  { label: '2-3 Meldungen', color: '#b8de6f' },
+  { label: '4-6 Meldungen', color: '#f7b955' },
+  { label: '7-10 Meldungen', color: '#ef6a4b' },
+  { label: '11+ Meldungen', color: '#b91c1c' },
+];
+
+const getHotspotColor = (count) => {
+  if (count >= 11) return HOTSPOT_SCALE[4].color;
+  if (count >= 7) return HOTSPOT_SCALE[3].color;
+  if (count >= 4) return HOTSPOT_SCALE[2].color;
+  if (count >= 2) return HOTSPOT_SCALE[1].color;
+  return HOTSPOT_SCALE[0].color;
+};
+
+const renderHotspotLegend = () => {
+  const node = document.getElementById('hotspot-legend');
+  if (!node) return;
+
+  node.innerHTML = HOTSPOT_SCALE.map((entry) => `
+    <span class="hotspot-legend__item">
+      <span class="hotspot-legend__swatch" style="background:${entry.color}"></span>
+      <span>${entry.label}</span>
+    </span>
+  `).join('');
+};
+
+const isWidgetCollapsed = (widgetId) => Boolean(dashboardState.collapsedWidgets[widgetId]);
+const syncWidgetState = () => {
+  document.querySelectorAll('[data-widget]').forEach((section) => {
+    const widgetId = section.dataset.widget;
+    const collapsed = isWidgetCollapsed(widgetId);
+    section.classList.toggle('is-collapsed', collapsed);
+    const button = section.querySelector('[data-action="toggle-widget"]');
+    if (button) {
+      button.innerText = collapsed ? 'Ausklappen' : 'Einklappen';
+      button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      button.setAttribute('title', collapsed ? 'Widget anzeigen' : 'Widget ausblenden');
+    }
+  });
 };
 
 const aggregateCounts = (items, getKey) => {
@@ -224,6 +268,40 @@ const getIssueDateInfo = (item) => {
     value: item.erstellungsDatum || 'k. A.',
     toggleLabel: 'Abschlussdatum',
   };
+};
+
+const renderTodayIssues = (items) => {
+  const node = document.getElementById('today-issues-list');
+  if (!node) {
+    return;
+  }
+
+  if (!items.length) {
+    node.innerHTML = '<li class="item issue-item issue-item--empty">Heute liegen noch keine Meldungen vor.</li>';
+    return;
+  }
+
+  node.innerHTML = items
+    .map((item) => {
+      const image = (item.imageUrls || [])[0]
+        ? `<img class="issue-item__image" src="${escapeHtml((item.imageUrls || [])[0])}" alt="Meldungsbild">`
+        : '';
+      return `
+        <li class="item issue-item issue-item--compact ${getStatusMeta(item.status).itemClass}">
+          ${image}
+          <div class="issue-item__topline">
+            <a class="issue-item__title-link" href="${escapeHtml(item.detailUrl)}" target="_blank" rel="noreferrer">${escapeHtml(item.betreff)}</a>
+            <span class="issue-item__status ${getStatusMeta(item.status).className}">${escapeHtml(item.status)}</span>
+          </div>
+          <div class="issue-item__chips">
+            <span class="issue-item__chip">🕒 ${escapeHtml(item.erstellungsDatum || 'k. A.')}</span>
+            <span class="issue-item__chip">📍 ${escapeHtml(item.address || item.hotspot || 'k. A.')}</span>
+          </div>
+          <p class="issue-item__text">${escapeHtml(item.sachverhalt || '')}</p>
+        </li>
+      `;
+    })
+    .join('');
 };
 
 const renderIssues = (items) => {
@@ -572,10 +650,10 @@ const updateMap = (items) => {
   filteredEntries.slice(0, 30).forEach((entry) => {
     const marker = L.circle([entry.lat, entry.lng], {
       radius: 35 + entry.count * 18,
-      color: '#cb4e5f',
+      color: '#7f1d1d',
       weight: 2,
-      fillColor: '#ee6f1f',
-      fillOpacity: Math.min(0.55, 0.18 + entry.count * 0.05),
+      fillColor: getHotspotColor(entry.count),
+      fillOpacity: Math.min(0.7, 0.22 + entry.count * 0.06),
     });
 
     marker.bindPopup(`
@@ -620,7 +698,10 @@ const renderDashboard = () => {
   renderRanking('ranking-hotspots', aggregateCounts(items, (item) => item.hotspot));
   renderRanking('ranking-status', aggregateCounts(items, (item) => item.status));
   renderIssues(items);
+  renderTodayIssues((dashboardState.data?.todayIssues || []).filter(matchesCommonFilters));
   updateMap(items);
+  renderHotspotLegend();
+  syncWidgetState();
 };
 
 const handleDashboardClick = (event) => {
@@ -663,6 +744,13 @@ const handleDashboardClick = (event) => {
   if (button.dataset.action === 'set-status' && button.dataset.status) {
     dashboardState.selectedStatus = button.dataset.status;
     renderDashboard();
+    return;
+  }
+
+  if (button.dataset.action === 'toggle-widget' && button.dataset.target) {
+    const key = button.dataset.target;
+    dashboardState.collapsedWidgets[key] = !dashboardState.collapsedWidgets[key];
+    syncWidgetState();
   }
 };
 
@@ -691,6 +779,7 @@ const initOrdnungsamtDashboard = () => {
   populateProviderSelect();
   renderStatusButtons();
   initMap();
+  syncWidgetState();
 
   const yearSelect = document.getElementById('issue-year');
   const monthSelect = document.getElementById('issue-month');
