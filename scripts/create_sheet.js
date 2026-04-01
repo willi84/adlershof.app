@@ -2,14 +2,23 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
+const TARGET = 'hoher-fläming-pois.csv';
+// const TARGET = 'adlershof-pois.csv';
 const HERE_API_KEY = process.env.HERE_API_KEY;
 
+// const bbox = {
+//   north: 52.4445,
+//   south: 52.425,
+//   west: 13.509,
+//   east: 13.566
+// };
 const bbox = {
-  north: 52.4445,
-  south: 52.425,
-  west: 13.509,
-  east: 13.566
+  north: 52.25,
+  south: 51.95,
+  west: 12.25,
+  east: 12.75
 };
+
 
 console.log("🛰️ Erwartete Requests:");
 console.log("- OSM Overpass-Abfrage für: shop, amenity, office, healthcare, tourism, leisure, club");
@@ -158,7 +167,7 @@ async function mergeSources(osm, here) {
   return combined;
 }
 
-function writeCSV(data, outputPath = path.join('tmp', 'adlershof-pois.csv')) {
+function writeCSV(data, outputPath = path.join('tmp', TARGET)) {
   if (!fs.existsSync('tmp')) {
     fs.mkdirSync('tmp');
   }
