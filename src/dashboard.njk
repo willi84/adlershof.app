@@ -5,10 +5,17 @@ layout: base.njk
 
 {% set dataset = ordnungsamt.dataset %}
 
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin=""
+>
+
 <div class="container dashboard" data-ordnungsamt-dashboard>
   <div class="container my-5">
     <h1 class="title">Adlershof<span>.issues</span></h1>
-    <p class="small center">Ordnungsamt-Meldungen mit Zeitfilter und dynamischer Statistik</p>
+    <p class="small center">🧭 Ordnungsamt-Meldungen mit Zeitfilter, Hotspots und Dauer-Metriken</p>
     <p class="center">
       Quelle: <strong>{{ dataset.source.modeLabel }}</strong>
       {% if dataset.source.scopeLabel %}
@@ -26,27 +33,27 @@ layout: base.njk
   </div>
 
   <section class="dashboard__stats">
-    <article class="dashboard__card">
-      <span class="dashboard__label">Gefilterte Meldungen</span>
+    <article class="dashboard__card dashboard__card--accent">
+      <span class="dashboard__label">📌 Gefilterte Meldungen</span>
       <strong class="dashboard__value" id="issue-count">{{ dataset.totals.adlershof }}</strong>
     </article>
     <article class="dashboard__card">
-      <span class="dashboard__label">Quelle gesamt</span>
+      <span class="dashboard__label">🌍 Quelle gesamt</span>
       <strong class="dashboard__value" id="source-total-count">{{ dataset.totals.source }}</strong>
     </article>
     <article class="dashboard__card">
-      <span class="dashboard__label">Vorfilter Treptow/Adlershof</span>
+      <span class="dashboard__label">🧹 Vorfilter Treptow/Adlershof</span>
       <strong class="dashboard__value" id="candidate-total-count">{{ dataset.totals.districtCandidates }}</strong>
     </article>
     <article class="dashboard__card">
-      <span class="dashboard__label">JSON-Generierung</span>
+      <span class="dashboard__label">⏱️ JSON-Generierung</span>
       <strong class="dashboard__value dashboard__value--small" id="generation-duration">{{ dataset.generationDurationText }}</strong>
     </article>
   </section>
 
-  <section class="dashboard__grid">
-    <article class="dashboard__panel">
-      <h2>Filter</h2>
+  <section class="dashboard__grid dashboard__grid--filters">
+    <article class="dashboard__panel dashboard__panel--soft">
+      <h2>🎛️ Filter</h2>
       <div class="dashboard__filters">
         <label class="dashboard__field">
           <span>Jahr</span>
@@ -55,6 +62,10 @@ layout: base.njk
         <label class="dashboard__field">
           <span>Monat</span>
           <select class="form-control dashboard__select" id="issue-month"></select>
+        </label>
+        <label class="dashboard__field">
+          <span>Status</span>
+          <select class="form-control dashboard__select" id="issue-status"></select>
         </label>
         <label class="dashboard__field dashboard__field--wide">
           <span>Suche</span>
@@ -76,31 +87,66 @@ layout: base.njk
       </p>
     </article>
 
+    <article class="dashboard__panel dashboard__panel--map">
+      <h2>🗺️ Hotspots</h2>
+      <div id="issues-map" class="dashboard__map"></div>
+      <p class="small dashboard__map-hint">Punkte basieren auf den aktuell gefilterten Meldungen mit Koordinaten.</p>
+    </article>
+  </section>
+
+  <section class="dashboard__grid">
+    <article class="dashboard__panel dashboard__panel--wide">
+      <div class="dashboard__panel-headline">
+        <h2>🟩 Aktivität</h2>
+              </div>
+      <div id="activity-heatmap" class="activity-heatmap"></div>
+    </article>
+
     <article class="dashboard__panel">
-      <h2>Häufigste Issue-Typen</h2>
+      <h2>🧱 Häufigste Issue-Typen</h2>
       <ul class="dashboard__ranking" id="ranking-issue-types"></ul>
     </article>
 
     <article class="dashboard__panel">
-      <h2>Häufigste Straßen</h2>
+      <h2>🛣️ Häufigste Straßen</h2>
       <ul class="dashboard__ranking" id="ranking-streets"></ul>
     </article>
 
     <article class="dashboard__panel">
-      <h2>Häufigste Adressen</h2>
+      <h2>📍 Häufigste Adressen</h2>
       <ul class="dashboard__ranking" id="ranking-addresses"></ul>
     </article>
 
     <article class="dashboard__panel">
-      <h2>Status</h2>
+      <h2>🔥 Hotspots</h2>
+      <ul class="dashboard__ranking" id="ranking-hotspots"></ul>
+    </article>
+
+    <article class="dashboard__panel">
+      <h2>🚦 Status</h2>
       <ul class="dashboard__ranking" id="ranking-status"></ul>
     </article>
   </section>
 
   <section class="dashboard__panel dashboard__panel--wide">
-    <h2>Alle Meldungen</h2>
+    <div class="dashboard__panel-headline">
+      <h2>🗂️ Alle Meldungen</h2>
+      <p class="small">PLZ und Bezirk sind in den Zusatzdetails einklappbar.</p>
+    </div>
+    <div class="issues-toolbar">
+      <div id="issue-status-buttons" class="issues-toolbar__buttons"></div>
+      <label class="dashboard__field issues-toolbar__field">
+        <span>Dienstleister</span>
+        <select class="form-control dashboard__select" id="issue-provider"></select>
+      </label>
+    </div>
     <ul class="items items--dashboard" id="issues-list"></ul>
   </section>
 </div>
 
 <script id="ordnungsamt-data" type="application/json">{{ dataset | dump | safe }}</script>
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>

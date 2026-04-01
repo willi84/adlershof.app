@@ -9,6 +9,18 @@ const DETAIL_PAGE_BASE_URL =
 const LOCAL_DATA_DIR = path.join(process.cwd(), "data");
 const LOCAL_DUMP_PATH = path.join(LOCAL_DATA_DIR, "ordnungsamt-dev-year.json");
 const DETAIL_CONCURRENCY = Number(process.env.ORDNUNGSAMT_DETAIL_CONCURRENCY || 8);
+const LIVE_START_YEAR = Number(process.env.ORDNUNGSAMT_LIVE_START_YEAR || 2020);
+const THIRD_PARTY_PATTERNS = [
+  { label: "BSR", terms: ["berliner stadtreinigung", " bsr ", "bsr"] },
+  { label: "Telekom", terms: ["telekom"] },
+  { label: "BVG", terms: ["bvg"] },
+  { label: "Berliner Wasserbetriebe", terms: ["wasserbetriebe", "berliner wasser", "bwb"] },
+  { label: "Stromnetz Berlin", terms: ["stromnetz berlin"] },
+  { label: "Vattenfall", terms: ["vattenfall"] },
+  { label: "Vodafone", terms: ["vodafone"] },
+  { label: "GASAG", terms: ["gasag"] },
+  { label: "Deutsche Bahn", terms: ["deutsche bahn", " db ", "s-bahn"] },
+];
 
 function formatDate(date) {
   return date.toISOString().slice(0, 10);
@@ -79,6 +91,19 @@ function createSearchText(item) {
     .trim();
 }
 
+
+function detectThirdParties(item) {
+  const text = normalizeText(
+    [item.betreff, item.sachverhalt, item.rueckMeldungAnBuerger]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  return THIRD_PARTY_PATTERNS
+    .filter((entry) => entry.terms.some((term) => text.includes(term)))
+    .map((entry) => entry.label);
+}
+
 function isTreptowKoepenick(item) {
   return normalizeText(item.bezirk) === "treptow-kopenick";
 }
@@ -126,6 +151,31 @@ function getYearRange() {
     from: formatDate(start),
     to: formatDate(end),
   };
+}
+
+function getHistoricalRanges(startYear) {
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const safeStartYear = Number.isFinite(startYear)
+    ? Math.min(startYear, currentYear)
+    : currentYear;
+  const ranges = [];
+
+  for (let year = safeStartYear; year <= currentYear; year += 1) {
+    const start = new Date(Date.UTC(year, 0, 1));
+    const end =
+      year === currentYear
+        ? currentDate
+        : new Date(Date.UTC(year, 11, 31, 23, 59, 59));
+
+    ranges.push({
+      year,
+      from: formatDate(start),
+      to: formatDate(end),
+    });
+  }
+
+  return ranges;
 }
 
 function isProductionBuild() {
@@ -191,8 +241,19 @@ async function fetchDetail(item) {
 function normalizeIssue(item) {
   const address = createAddress(item);
   const createdAt = parseBerlinDate(item.erstellungsDatum);
+  const updatedAt = parseBerlinDate(item.letzteAenderungDatum);
   const searchText = createSearchText(item);
   const createdDate = createdAt ? new Date(createdAt) : null;
+  const updatedDate = updatedAt ? new Date(updatedAt) : null;
+  const resolutionDurationHours =
+    createdDate && updatedDate
+      ? Math.max(0, (updatedDate.getTime() - createdDate.getTime()) / 36e5)
+      : null;
+  const resolutionDurationDays =
+    resolutionDurationHours === null
+      ? null
+      : Number((resolutionDurationHours / 24).toFixed(2));
+  const thirdParties = detectThirdParties(item);
 
   return {
     id: item.id,
@@ -201,6 +262,7 @@ function normalizeIssue(item) {
     betreff: item.betreff,
     erstellungsDatum: item.erstellungsDatum,
     createdAt,
+    updatedAt,
     year: createdDate ? createdDate.getUTCFullYear() : null,
     month: createdDate ? createdDate.getUTCMonth() + 1 : null,
     status: item.status,
@@ -217,6 +279,10 @@ function normalizeIssue(item) {
     detailUrl: `${DETAIL_PAGE_BASE_URL}${item.id}`,
     hotspot: createHotspot(item),
     searchText,
+    resolutionDurationHours,
+    resolutionDurationDays,
+    thirdParties,
+    isResolved: normalizeText(item.status) === "erledigt",
   };
 }
 
@@ -242,9 +308,18 @@ function buildAvailableFilters(issues) {
     )].sort((a, b) => b - a);
   }
 
+  const statuses = [...new Set(issues.map((item) => item.status).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, "de")
+  );
+  const thirdParties = [...new Set(issues.flatMap((item) => item.thirdParties || []))].sort(
+    (a, b) => a.localeCompare(b, "de")
+  );
+
   return {
     years,
     monthsByYear,
+    statuses,
+    thirdParties,
   };
 }
 
@@ -270,6 +345,31 @@ async function collectIssuesFromList(allIssues) {
       districtCandidates: districtCandidates.length,
       adlershof: issues.length,
     },
+  };
+}
+
+function mergeCollectionsById(collections) {
+  const sourceItems = new Map();
+
+  collections.forEach((collection) => {
+    collection.items.forEach((item) => {
+      if (item && item.id) {
+        sourceItems.set(item.id, item);
+      }
+    });
+  });
+
+  return [...sourceItems.values()];
+}
+
+async function fetchIssuesForRange(range) {
+  const requestUrl = `${API_BASE_URL}?von=${range.from}&bis=${range.to}`;
+  const listResponse = await fetchJson(requestUrl);
+
+  return {
+    ...range,
+    requestUrl,
+    items: Array.isArray(listResponse.index) ? listResponse.index : [],
   };
 }
 
@@ -305,6 +405,8 @@ async function readLocalDump() {
     const raw = await fs.readFile(LOCAL_DUMP_PATH, "utf8");
     const parsed = JSON.parse(raw);
 
+    const normalizedIssues = sortIssues((parsed.issues || []).map(normalizeIssue));
+
     return {
       ...parsed,
       source: {
@@ -313,7 +415,12 @@ async function readLocalDump() {
         modeLabel: "Lokaler 1-Jahres-Dump (bestehend)",
         dumpPath: LOCAL_DUMP_PATH,
       },
-      filters: buildAvailableFilters(parsed.issues || []),
+      filters: buildAvailableFilters(normalizedIssues),
+      totals: {
+        ...(parsed.totals || {}),
+        adlershof: normalizedIssues.length,
+      },
+      issues: normalizedIssues,
     };
   } catch (error) {
     return null;
@@ -338,18 +445,19 @@ async function getLocalDataset() {
 
 async function getLiveDataset() {
   const startedAt = Date.now();
-  const requestUrl = `${API_BASE_URL}/all`;
-  const listResponse = await fetchJson(requestUrl);
-  const allIssues = Array.isArray(listResponse.index) ? listResponse.index : [];
+  const ranges = getHistoricalRanges(LIVE_START_YEAR);
+  const yearlyResponses = await Promise.all(ranges.map(fetchIssuesForRange));
+  const allIssues = mergeCollectionsById(yearlyResponses);
   const collected = await collectIssuesFromList(allIssues);
   const generationDurationMs = Date.now() - startedAt;
 
   return {
     source: {
-      mode: "live-all",
-      modeLabel: "Live Vollabzug",
-      requestUrl,
-      scopeLabel: "Alle sichtbaren Meldungen",
+      mode: "live-historical-range",
+      modeLabel: "Live Jahresabzug",
+      requestUrl: `${API_BASE_URL}?von=${ranges[0].from}&bis=${ranges[ranges.length - 1].to}`,
+      requestUrls: yearlyResponses.map((entry) => entry.requestUrl),
+      scopeLabel: `${ranges[0].year} bis ${ranges[ranges.length - 1].year}`,
     },
     generatedAt: new Date().toISOString(),
     generationDurationMs,
